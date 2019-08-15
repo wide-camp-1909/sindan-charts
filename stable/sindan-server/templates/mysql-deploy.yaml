@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mysql
+  labels:
+{{ include "sindan-server.labels" . | indent 4 }}
+  creationTimestamp: "2019-08-17T14:20:16Z"
+
+<<: &healthcheck-template
+ exec:
+   command:
+     - /bin/sh
+     - -c
+     - mysqladmin ping -u${MYSQL_USER} -p$(cat /run/secrets/sindan-net.com/db_password)
+ initialDelaySeconds: 10
+ periodSeconds: 1
+ timeoutSeconds: 1
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+{{ include "sindan-server.labels" . | indent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: mysql
+{{ include "sindan-server.labels" . | indent 8 }}
+    spec:
+      containers:
+        - image: {{ .Values.mysql.image }}:{{ .Values.mysql.tag }}
+          imagePullPolicy: {{ .Values.mysql.pullPolicy }}
+          name: mysql
+          env:
+            - name: MYSQL_RANDOM_ROOT_PASSWORD
+              value: "yes"
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.db.name }}
+            - name: MYSQL_USER
+              value: {{ .Values.mysql.db.user }}
+            - name: MYSQL_PASSWORD_FILE
+              value: "/run/secrets/sindan-net.com/db_password"
+          ports:
+            - name: mysql
+              containerPort: 3306
+          livenessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 1
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+            - name: mysql-secret
+              mountPath: "/run/secrets/sindan-net.com"
+              readOnly: true
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-mysql-pvc
+        - name: mysql-secret
+          secret:
+            secretName: {{ .Release.Name }}-secret
+            items:
+              - key: db-password
+                path: db_password

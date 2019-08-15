@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-visualization
+  labels:
+{{ include "sindan-server.labels" . | indent 4 }}
+  creationTimestamp: "2019-08-17T14:20:16Z"
+
+<<: &container-template
+  image: {{ .Values.visualization.image }}:{{ .Values.visualization.tag }}
+  imagePullPolicy: {{ .Values.visualization.pullPolicy }}
+  env:
+    - name: DB_HOST
+      value: {{ .Release.Name }}-mysql
+    - name: DB_NAME
+      value: {{ .Values.mysql.db.name }}
+    - name: DB_GRANTED_USER
+      value: {{ .Values.mysql.db.user }}
+    - name: DB_PASSWORD_FILE
+      value: "/run/secrets/sindan-net.com/db_password"
+    - name: RAILS_SECRETKEY_FILE
+      value: "/run/secrets/sindan-net.com/rails_secret_key_base"
+    - name: ACCOUNTS_FILE
+      value: "/run/secrets/sindan-net.com/accounts"
+  volumeMounts:
+    - name: secrets
+      mountPath: "/run/secrets/sindan-net.com"
+      readOnly: true
+
+<<: &healthcheck-template
+  httpGet:
+    path: /
+    port: webrick
+  initialDelaySeconds: 30
+  periodSeconds: 1
+  timeoutSeconds: 5
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: visualization
+{{ include "sindan-server.labels" . | indent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: visualization
+{{ include "sindan-server.labels" . | indent 8 }}
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: mi2428/wait-for-it:latest
+          args: ["-q", "-t", "0", "{{ .Release.Name }}-mysql:3306", "--", "sleep", "10"]
+        - name: rails-db-migrate
+          <<: *container-template
+          command: ["bundle", "exec", "rails", "db:migrate"]
+        - name: rails-db-seed
+          <<: *container-template
+          command: ["bundle", "exec", "rails", "db:seed"]
+      containers:
+        - name: visualization
+          <<: *container-template
+          command: ["bundle", "exec", "rails", "s", "-p", "3000", "-b", "0.0.0.0"]
+          ports:
+            - name: webrick
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 1
+      volumes:
+        - name: secrets
+          secret:
+            secretName: {{ .Release.Name }}-secret
+            items:
+              - key: db-password
+                path: db_password
+              - key: rails-secret-key-base
+                path: rails_secret_key_base
+              - key: accounts.yml
+                path: accounts

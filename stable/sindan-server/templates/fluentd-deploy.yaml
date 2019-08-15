@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-fluentd
+  labels:
+{{ include "sindan-server.labels" . | indent 4 }}
+  creationTimestamp: "2019-08-17T14:20:16Z"
+
+<<: &healthcheck-template
+  httpGet:
+    path: /
+    port: healthcheck
+  initialDelaySeconds: 30
+  periodSeconds: 1
+  timeoutSeconds: 3
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluentd
+{{ include "sindan-server.labels" . | indent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: fluentd
+{{ include "sindan-server.labels" . | indent 8 }}
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: mi2428/wait-for-it:latest
+          args: ["-q", "-t", "0", "{{ .Release.Name }}-mysql:3306", "--", "sleep", "10"]
+      containers:
+        - image: {{ .Values.fluentd.image }}:{{ .Values.fluentd.tag }}
+          imagePullPolicy: {{ .Values.fluentd.pullPolicy }}
+          name: fluentd
+          env:
+            - name: DB_HOST
+              value: {{ .Release.Name }}-mysql
+            - name: DB_NAME
+              value: {{ .Values.mysql.db.name }}
+            - name: DB_GRANTED_USER
+              value: {{ .Values.mysql.db.user }}
+            - name: DB_PASSWORD_FILE
+              value: "/run/secrets/sindan-net.com/db_password"
+          ports:
+            - name: healthcheck
+              containerPort: 8080
+            - name: fluentd
+              containerPort: 8888
+          volumeMounts:
+            - name: fluentd-config
+              mountPath: "/fluentd/etc"
+              readOnly: true
+            - name: fluentd-secret
+              mountPath: "/run/secrets/sindan-net.com"
+              readOnly: true
+          livenessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 1
+      volumes:
+        - name: fluentd-config
+          configMap:
+            name: {{ .Release.Name }}-fluentd-config
+            items:
+              - key: fluent.conf
+                path: fluent.conf
+        - name: fluentd-secret
+          secret:
+            secretName: {{ .Release.Name }}-secret
+            items:
+              - key: db-password
+                path: db_password

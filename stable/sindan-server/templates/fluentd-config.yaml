@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-fluentd-config
+  labels:
+{{ include "sindan-server.labels" . | indent 4 }}
+  creationTimestamp: "2019-08-17T14:20:16Z"
+data:
+  fluent.conf: |
+    <source>
+      @type http_heartbeat
+      port 8080
+      bind 0.0.0.0
+    </source>
+
+    <source>
+      @type http
+      @label @sindan
+      port 8888
+      bind 0.0.0.0
+      body_size_limit 32m
+      keepalive_timeout 10s
+    </source>
+
+    <label @sindan>
+      <match sindan.log>
+        @type mysql_bulk
+        host "#{ENV['DB_HOST']}"
+        port 3306
+        database "#{ENV['DB_NAME']}"
+        username "#{ENV['DB_GRANTED_USER']}"
+        password "#{File.open(ENV['DB_PASSWORD_FILE']).read.chomp}"
+        table diagnosis_logs
+        key_names layer, target, log_group, log_type, log_campaign_uuid, result, detail, occurred_at
+        column_names layer, target, log_group, log_type, log_campaign_uuid, result, detail, occurred_at
+        flush_interval 5s
+        retry_limit 2
+      </match>
+
+      <match sindan.log_campaign>
+        @type mysql_bulk
+        host "#{ENV['DB_HOST']}"
+        port 3306
+        database "#{ENV['DB_NAME']}"
+        username "#{ENV['DB_GRANTED_USER']}"
+        password "#{File.open(ENV['DB_PASSWORD_FILE']).read.chomp}"
+        table log_campaigns
+        key_names log_campaign_uuid, ssid, mac_addr, os, occurred_at
+        column_names log_campaign_uuid, ssid, mac_addr, os, occurred_at
+        flush_interval 5s
+        retry_limit 2
+      </match>
+    </label>

@@ -1,0 +1,14 @@
+apiVersion: v1
+name: sindan-server
+version: 0.9.0
+description: A Helm chart for server-side SINDAN suite
+home: http://www.sindan-net.com/
+sources:
+  - https://github.com/SINDAN/sindan-docker
+  - https://github.com/SINDAN/sindan-visualization
+maintainers:
+  - name: Taichi MIYA
+    email: tmiya@protonmail.ch
+icon: https://avatars3.githubusercontent.com/u/31984381
+appVersion: "1.3.0"
+deprecated: false

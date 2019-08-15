@@ -1,0 +1,40 @@
+ingress:
+  enabled: false
+
+fluentd:
+  image: sindan/fluentd
+  tag: "1.3.0"
+  pullPolicy: Always
+  servicePort: 8080
+
+mysql:
+  image: mysql
+  tag: "5.7"
+  pullPolicy: IfNotPresent
+  db:
+    name: sindan_production
+    user: sindan
+    password: cGFzc3dvcmQ=
+  persistence:
+    size: 2Gi
+    storageClassName: mysql
+
+mysqlbackup:
+  cron:
+    schedule: "0 * * * *"
+  persistence:
+    size: 2Gi
+    storageClassName: mysql-backup
+
+visualization:
+  image: sindan/visualization
+  tag: "1.3.0"
+  pullPolicy: Always
+  rails:
+    secretKeyBase: SWYteW91LWNoYW5nZS10aGlzLXlvdS1uZWVkLXRvLWJ1aWxkLWRvY2tlcmZpbGUtbG9jYWxseQ==
+  webui:
+    accounts:
+      - username: sindan
+        email: sindan-wg@wide.ad.jp
+        password: changeme
+  servicePort: 80

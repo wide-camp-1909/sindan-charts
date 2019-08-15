@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-mysql-pvc
+  labels:
+{{ include "sindan-server.labels" . | indent 4 }}
+spec:
+  storageClassName: {{ .Values.mysql.persistence.storageClassName }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mysql.persistence.size }}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-mysqlbackup-pvc
+  labels:
+{{ include "sindan-server.labels" . | indent 4 }}
+spec:
+  storageClassName: {{ .Values.mysqlbackup.persistence.storageClassName }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.mysqlbackup.persistence.size }}
