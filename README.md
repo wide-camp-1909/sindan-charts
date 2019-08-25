@@ -20,8 +20,8 @@ $ helm search sindan
 
 ### List of Packages
 | Name 	| Chart version 	| App version 	| Description 	|
-|:----------------------------	|:--------------	|:------------	|:------------------------------------------------	|
-| [sindan-stable/sindan-server](https://github.com/SINDAN/charts/tree/master/stable/sindan-server) 	| 0.9.0 	| 1.3.0 	| A Helm chart for server-side SINDAN suite (**TBD**) 	|
+|:----	|:----	|:----	|:----	|
+| [stable/sindan-server](https://github.com/SINDAN/charts/tree/master/stable/sindan-server) 	| 0.9.0 	| 1.3.0 	| **TBD:** Server-side SINDAN suite (fluetnd, mysql, visualization) 	|
 
 ## Contributing
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
