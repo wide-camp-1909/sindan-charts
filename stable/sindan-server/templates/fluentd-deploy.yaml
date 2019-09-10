@@ -4,26 +4,34 @@ metadata:
   name: {{ .Release.Name }}-fluentd
   labels:
 {{ include "sindan-server.labels" . | indent 4 }}
+  annotations:
+    deployment.kubernetes.io/revision: "1"
   creationTimestamp: "2019-08-17T14:20:16Z"
+  generation: 1
 
 <<: &healthcheck-template
   httpGet:
     path: /
     port: healthcheck
   initialDelaySeconds: 30
-  periodSeconds: 1
   timeoutSeconds: 3
+  periodSeconds: 1
 
 spec:
   replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app: fluentd
 {{ include "sindan-server.labels" . | indent 6 }}
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: fluentd
 {{ include "sindan-server.labels" . | indent 8 }}
@@ -50,6 +58,14 @@ spec:
               containerPort: 8080
             - name: fluentd
               containerPort: 8888
+          readinessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 1
+          livenessProbe:
+            <<: *healthcheck-template
+            successThreshold: 1
+            failureThreshold: 5
           volumeMounts:
             - name: fluentd-config
               mountPath: "/fluentd/etc"
@@ -57,14 +73,6 @@ spec:
             - name: fluentd-secret
               mountPath: "/run/secrets/sindan-net.com"
               readOnly: true
-          livenessProbe:
-            <<: *healthcheck-template
-            successThreshold: 1
-            failureThreshold: 5
-          readinessProbe:
-            <<: *healthcheck-template
-            successThreshold: 1
-            failureThreshold: 1
       volumes:
         - name: fluentd-config
           configMap:

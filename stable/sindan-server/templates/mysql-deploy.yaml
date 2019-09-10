@@ -5,6 +5,9 @@ metadata:
   labels:
 {{ include "sindan-server.labels" . | indent 4 }}
   creationTimestamp: "2019-08-17T14:20:16Z"
+  annotations:
+    deployment.kubernetes.io/revision: "1"
+  generation: 1
 
 <<: &healthcheck-template
  exec:
@@ -18,14 +21,19 @@ metadata:
 
 spec:
   replicas: 1
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app: mysql
 {{ include "sindan-server.labels" . | indent 6 }}
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
   template:
     metadata:
+      creationTimestamp: null
       labels:
         app: mysql
 {{ include "sindan-server.labels" . | indent 8 }}

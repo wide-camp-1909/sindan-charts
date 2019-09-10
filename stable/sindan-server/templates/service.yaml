@@ -5,14 +5,14 @@ metadata:
   labels:
 {{ include "sindan-server.labels" . | indent 4 }}
 spec:
-  ports:
-    - name: fluentd
-      protocol: TCP
-      port: 8080
-      targetPort: {{ .Values.fluentd.servicePort }}
   selector:
     app: fluentd
 {{ include "sindan-server.labels" . | indent 4 }}
+  ports:
+    - name: fluentd
+      protocol: TCP
+      port: 8888
+      targetPort: {{ .Values.fluentd.servicePort }}
 
 ---
 
@@ -23,14 +23,14 @@ metadata:
   labels:
 {{ include "sindan-server.labels" . | indent 4 }}
 spec:
+  selector:
+    app: mysql
+{{ include "sindan-server.labels" . | indent 4 }}
   ports:
     - name: mysql
       protocol: TCP
       port: 3306
       targetPort: 3306
-  selector:
-    app: mysql
-{{ include "sindan-server.labels" . | indent 4 }}
 
 ---
 
@@ -41,11 +41,11 @@ metadata:
   labels:
 {{ include "sindan-server.labels" . | indent 4 }}
 spec:
+  selector:
+    app: visualization
+{{ include "sindan-server.labels" . | indent 4 }}
   ports:
     - name: visualization
       protocol: TCP
       port: 3000
       targetPort: {{ .Values.visualization.servicePort }}
-  selector:
-    app: visualization
-{{ include "sindan-server.labels" . | indent 4 }}
